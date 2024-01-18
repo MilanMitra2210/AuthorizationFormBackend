@@ -21,12 +21,6 @@ function authenticateToken(req: Request, res: Response, next: NextFunction) {
       return res.status(403).json({ message: 'Access Forbidden' });
     }
 
-    //  compare with loginToken 
-    const loginToken = req.body.loginToken;
-    if (!loginToken || loginToken !== currentToken) {
-      return res.status(403).json({ message: 'Access Forbidden ' });
-    }
-
     // req.user = user;
     next();
   });

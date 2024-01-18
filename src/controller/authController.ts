@@ -186,9 +186,9 @@ const updateDataController= async (req: Request, res: Response): Promise<any> =>
         
 
         // Update user fields
-        if(existingUser.password){
+        if(updatedUserData.password){
           const hashedPassword = await hashPassword(updatedUserData.password);
-          existingUser.password = hashedPassword;
+          updatedUserData.password = hashedPassword;
         }
         existingUser.name = updatedUserData.name || existingUser.name;
         existingUser.email = updatedUserData.email || existingUser.email;

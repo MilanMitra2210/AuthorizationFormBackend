@@ -40,25 +40,6 @@ const router: Router = express.Router();
  *              type: string
  *          hobbies:
  *              type: any
- *     userDataWithToken:
- *        type: object
- *        properties:
- *          name:
- *              type: string 
- *          email:
- *              type: string
- *          password:
- *              type: string
- *          phone:
- *              type: string
- *          address:
- *              type: string
- *          gender:
- *              type: string
- *          loginToken:
- *              type: string    
- *          hobbies:
- *              type: any
  *   securitySchemes:
  *     BearerAuth:
  *       type: http
@@ -148,7 +129,7 @@ router.get('/users', listDataController); // list of all users || GET
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/userDataWithToken' 
+ *             $ref: '#/components/schemas/userData' 
  *     security:
  *       - BearerAuth: []         
  *     responses:
@@ -177,22 +158,14 @@ router.put('/update-user/:id', authenticateToken, updateDataController); // upda
  *       - in: header
  *         name: Authorization
  *         required: true
- *         description: token for authentication
+ *         description: Token for authentication
  *         schema:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/userDataWithToken'           
+ *     security:
+ *       - BearerAuth: []         
  *     responses:
  *       '200':
- *         description: User Updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/user'
+ *         description: User Deleted successfully
  */
 router.delete('/delete-user/:id', authenticateToken, deleteDataController); // delete data || delete
 
