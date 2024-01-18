@@ -34,6 +34,14 @@ const userSchema = new Schema(
         required:true,
         enum: ['Reading', 'Travelling', 'Coding'],
     }],
+    isMailVerified:{
+      type: Boolean,
+      default: false,
+    },
+    isPhoneVerified:{
+      type: Boolean,
+      default: false,
+    }
   },
   { timestamps: true }
 );

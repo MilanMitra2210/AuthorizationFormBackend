@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { registerController, loginController, listDataController, updateDataController, deleteDataController } from './../controller/authController';
+import { registerController, loginController, verifyEmailController, listDataController, verifyDataController, updateDataController, deleteDataController } from './../controller/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 // router object
@@ -168,5 +168,11 @@ router.put('/update-user/:id', authenticateToken, updateDataController); // upda
  *         description: User Deleted successfully
  */
 router.delete('/delete-user/:id', authenticateToken, deleteDataController); // delete data || delete
+
+
+router.get('/sendotp', authenticateToken, verifyDataController); // send otp
+
+
+router.get('/verifyemail/:id', verifyEmailController); // verify otp
 
 export default router;

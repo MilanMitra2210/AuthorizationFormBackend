@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import * as JWT from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // Protected Routes, Token Based
 function authenticateToken(req: Request, res: Response, next: NextFunction) {
@@ -16,13 +16,17 @@ function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const jwt_secret = process.env.JWT_SECRET || "";
 
   // Verify the token in the header
-  JWT.verify(currentToken, jwt_secret, (err, user) => {
+  jwt.verify(currentToken, jwt_secret, (err, user) => {
     if (err) {
       return res.status(403).json({ message: 'Access Forbidden' });
     }
-
-    // req.user = user;
-    next();
+    if (typeof user === 'object' && user !== null) {
+      
+      req.body._id = user._id;
+      next();
+    } else {
+      next();
+    }
   });
 }
 

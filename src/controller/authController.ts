@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import {hashPassword, comparePassword, isValidEmail,} from "../helpers/authHelper";
+import { hashPassword, comparePassword, isValidEmail, verifyPhoneNumberAndMail, sendVerificationMail } from "../helpers/authHelper";
 import userModel from "../models/userModel";
 import JWT from "jsonwebtoken";
+import { verify } from "crypto";
 
 const registerController = async (
   req: Request,
@@ -42,7 +43,7 @@ const registerController = async (
 
     // existing user
     if (existingUser) {
-      return res.status(200).send({
+      return res.status(409).send({
         success: false,
         message: "Already Registered please login",
       });
@@ -61,6 +62,8 @@ const registerController = async (
       gender,
       hobbies,
     }).save();
+
+    verifyPhoneNumberAndMail(name, email, phone);
 
     res.status(200).send({
       success: true,
@@ -81,7 +84,7 @@ const registerController = async (
 const loginController = async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(404).send({
         success: false,
@@ -149,62 +152,62 @@ const listDataController = async (req: Request, res: Response): Promise<any> => 
     res.status(200).json(users);
   } catch (error) {
     res.status(500).send({
-        success: false,
-        message: "Error in Fetching data",
-        error,
+      success: false,
+      message: "Error in Fetching data",
+      error,
     });
   }
 };
 
-const updateDataController= async (req: Request, res: Response): Promise<any> =>{
-    const userId = req.params.id;
-    const updatedUserData = req.body;
-    
+const updateDataController = async (req: Request, res: Response): Promise<any> => {
+  const userId = req.params.id;
+  const updatedUserData = req.body;
 
 
 
-    //email validation
-    if(updatedUserData.email){
-        const isEmail = await isValidEmail(updatedUserData.email);
-        if (!isEmail) {
-            return res.status(400).send({ success: false, message: "Please Enter Correct Email" });
-          }
+
+  //email validation
+  if (updatedUserData.email) {
+    const isEmail = await isValidEmail(updatedUserData.email);
+    if (!isEmail) {
+      return res.status(400).send({ success: false, message: "Please Enter Correct Email" });
     }
-    
-    
-    if(userId.length != 24){
-        return res.status(400).json({ message: 'ID is not of specified length' });
+  }
+
+
+  if (userId.length != 24) {
+    return res.status(400).json({ message: 'ID is not of specified length' });
+  }
+
+  try {
+    const existingUser = await userModel.findById(userId);
+
+
+    if (!existingUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    try {
-        const existingUser = await userModel.findById(userId);
-        
 
-        if (!existingUser) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
-
-        // Update user fields
-        if(updatedUserData.password){
-          const hashedPassword = await hashPassword(updatedUserData.password);
-          updatedUserData.password = hashedPassword;
-        }
-        existingUser.name = updatedUserData.name || existingUser.name;
-        existingUser.email = updatedUserData.email || existingUser.email;
-        existingUser.phone = updatedUserData.phone || existingUser.phone;
-        existingUser.address = updatedUserData.address || existingUser.address;
-        existingUser.gender = updatedUserData.gender || existingUser.gender;
-        existingUser.hobbies = updatedUserData.hobbies || existingUser.hobbies;
-
-        // Save updated user data
-        await existingUser.save();
-
-        return res.status(200).json({ message: 'User updated successfully', user: existingUser });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+    // Update user fields
+    if (updatedUserData.password) {
+      const hashedPassword = await hashPassword(updatedUserData.password);
+      updatedUserData.password = hashedPassword;
     }
+    existingUser.name = updatedUserData.name || existingUser.name;
+    existingUser.email = updatedUserData.email || existingUser.email;
+    existingUser.phone = updatedUserData.phone || existingUser.phone;
+    existingUser.address = updatedUserData.address || existingUser.address;
+    existingUser.gender = updatedUserData.gender || existingUser.gender;
+    existingUser.hobbies = updatedUserData.hobbies || existingUser.hobbies;
+
+    // Save updated user data
+    await existingUser.save();
+
+    return res.status(200).json({ message: 'User updated successfully', user: existingUser });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
 };
 
 const deleteDataController = async (req: Request, res: Response): Promise<any> => {
@@ -233,4 +236,46 @@ const deleteDataController = async (req: Request, res: Response): Promise<any> =
   }
 };
 
-export { registerController, loginController , listDataController, updateDataController, deleteDataController};
+const verifyDataController = async (req: Request, res: Response): Promise<any> => {
+  const { _id } = req.body;
+  
+
+  try {
+    const user = await userModel.findById(_id);
+    // console.log(user);
+    
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    sendVerificationMail(user);
+
+    return res.status(200).json({ message: 'OTP and verification mail sent successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+
+}
+const verifyEmailController = async (req: Request, res: Response): Promise<any> => {
+  const token = req.params.id;
+  try {
+    const jwt_secret_key: string = process.env.JWT_OTP_SECRET || "";
+    let userId: string =  ""; 
+    JWT.verify(token, jwt_secret_key, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: 'Access Forbidden' });
+      }
+      if (typeof user === 'object' && user !== null) {
+        userId = user._id;
+      }
+    });
+    await userModel.updateOne({_id: userId}, { $set: { isMailVerified: true } });
+    return res.status(200).send("Email Verified Succucessfully");
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+export { registerController, loginController,verifyDataController, listDataController, updateDataController, deleteDataController, verifyEmailController};
