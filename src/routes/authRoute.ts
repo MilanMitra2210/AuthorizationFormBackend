@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { registerController, loginController, verifyEmailController, listDataController, verifyDataController, updateDataController, deleteDataController } from './../controller/authController';
+import { registerController, loginController, verifyEmailController, listDataController, verifyDataController, updateDataController, deleteDataController, verifyOTPController } from './../controller/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 // router object
@@ -65,7 +65,7 @@ const router: Router = express.Router();
  *             $ref: '#/components/schemas/userData'           
  *     responses:
  *       '200':
- *         description: Register successfully
+ *         description: Registered successfully
  */
 router.post('/register', registerController);
 
@@ -169,10 +169,11 @@ router.put('/update-user/:id', authenticateToken, updateDataController); // upda
  */
 router.delete('/delete-user/:id', authenticateToken, deleteDataController); // delete data || delete
 
-
 router.get('/sendotp', authenticateToken, verifyDataController); // send otp
 
+router.get('/verifyotp/:otp', authenticateToken, verifyOTPController); // verify otp
 
-router.get('/verifyemail/:id', verifyEmailController); // verify otp
+router.get('/verifyemail/:token', authenticateToken, verifyEmailController); // verify otp,
+// for more authetication we can add middleware and pass token
 
 export default router;

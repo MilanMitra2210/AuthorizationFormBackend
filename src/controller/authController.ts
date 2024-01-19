@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { hashPassword, comparePassword, isValidEmail, verifyPhoneNumberAndMail, sendVerificationMail } from "../helpers/authHelper";
 import userModel from "../models/userModel";
 import JWT from "jsonwebtoken";
+import otpModel from "../models/otpModel";
 
 const registerController = async (
   req: Request,
@@ -228,7 +229,7 @@ const deleteDataController = async (req: Request, res: Response): Promise<any> =
     // Delete the user
     const deletedUser = await userModel.findByIdAndDelete(userId);
 
-    return res.status(200).json({ message: 'User deleted successfully' });
+    return res.status(200).json({ message: 'User deleted successfully', deletedUser });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
@@ -237,17 +238,17 @@ const deleteDataController = async (req: Request, res: Response): Promise<any> =
 
 const verifyDataController = async (req: Request, res: Response): Promise<any> => {
   const { _id } = req.body;
-  
+
 
   try {
     const user = await userModel.findById(_id);
     // console.log(user);
-    
+
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    if(user.isMailVerified === true && user.isPhoneVerified == true){
+    if (user.isMailVerified === true && user.isPhoneVerified == true) {
       return res.status(201).json({ message: 'User Email and Phone number already verified.' });
     }
     sendVerificationMail(user);
@@ -260,24 +261,80 @@ const verifyDataController = async (req: Request, res: Response): Promise<any> =
 
 }
 const verifyEmailController = async (req: Request, res: Response): Promise<any> => {
-  const token = req.params.id;
+  const { _id } = req.body;
+  const token = req.params.token;
   try {
+    const user = await userModel.findById(_id);
+    if (!user) {
+      return res.status(403).json({ message: 'You are Loged out, please Login' });
+    }
+    if (user.isMailVerified) {
+      return res.status(403).json({ message: 'You email is Already Verified' });
+    }
     const jwt_secret_key: string = process.env.JWT_OTP_SECRET || "";
-    let userId: string =  ""; 
+    let userId: string = "";
     JWT.verify(token, jwt_secret_key, (err, user) => {
       if (err) {
-        return res.status(403).json({ message: 'Access Forbidden' });
+        return res.status(403).json({ message: 'Your token has expired, Please login again.' });
       }
       if (typeof user === 'object' && user !== null) {
         userId = user._id;
       }
     });
-    await userModel.updateOne({_id: userId}, { $set: { isMailVerified: true } });
-    return res.status(200).send("Email Verified Succucessfully");
+    if (userId === _id ){
+      await userModel.updateOne({ _id: _id }, { $set: { isMailVerified: true } });
+    } else{
+      return res.status(400).json("Access Forbidden, You are trying to verify other's mail");
+    }
+    return res.status(200).json("Email Verified Succucessfully");
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
 
-export { registerController, loginController,verifyDataController, listDataController, updateDataController, deleteDataController, verifyEmailController};
+const verifyOTPController = async (req: Request, res: Response): Promise<any> => {
+  const { _id } = req.body;
+  const token = req.params.otp;
+
+  try {
+    const existingOTP = await otpModel.findById(_id);
+    const user = await userModel.findById(_id);
+
+    if (!user) {
+      return res.status(200).json("Your account has been deleted.");
+    }
+    if (user.isPhoneVerified) {
+      return res.status(200).json("Your Phone Number is already verified.");
+    }
+
+    if (!existingOTP) {
+      return res.status(200).json("There is no OTP in Database");
+    }
+    const otp = existingOTP.otp;
+    const match = await comparePassword(otp, token);
+
+    if (!match) {
+      return res.status(403).json("Invalid OTP");
+    }
+    if (existingOTP.updatedAt) {
+      const expireTime = new Date(existingOTP.updatedAt);
+      expireTime.setMinutes(existingOTP.updatedAt.getMinutes() + 5);
+      if (expireTime < new Date()) {
+        return res.status(403).json("Your OTP has expired, Resend OTP");
+      }
+    }
+    await userModel.updateOne({ _id: _id }, { $set: { isPhoneVerified: true } });
+    const deletedOTP = await otpModel.findByIdAndDelete(_id);
+
+    return res.status(200).json({message :"OTP Verified", deletedOTP});
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+export {
+  registerController, loginController, verifyDataController, listDataController,
+  updateDataController, deleteDataController, verifyEmailController, verifyOTPController
+};
