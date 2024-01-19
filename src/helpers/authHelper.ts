@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import NodeMailer from 'nodemailer';
 import jwt from "jsonwebtoken";
+import twilio from 'twilio';
+import otpModel from '../models/otpModel';
 
 // Configure nodemailer for sending emails
 const transporter = NodeMailer.createTransport({
@@ -82,8 +84,6 @@ const sendVerificationMail = async (user: any) => {
 </div>
 `;
 
-
-
   // Simulate sending an email
   const mailOptions = {
     from: 'milan.75way@gmail.com',
@@ -94,13 +94,58 @@ const sendVerificationMail = async (user: any) => {
   };
 
   //sending mail
-  const info = await transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
+  if(!user.isMailVerified){
+    const info = await transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        throw error;
+      } else {
+        console.log('Email sent:', info.response);
+      }
+    });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  //credentials
+  const sid: string = process.env.TWILIIO_ACCOUNT_SID || "";
+  const authToken: string = process.env.TWILIIO_AUTH_TOKEN || "";
+  const twilioPhone: string = process.env.TWILIIO_PHONE_NO || "";
+  
+  const client = twilio(sid, authToken);
+
+  if(!user.isPhoneVerified){
+    try {
+      // Send SMS using Twilio API
+      const result = await client.messages.create({
+        body: `Here is your OTP ${otp} for verify your phone number. This is valid for 5minutes only.`,
+        to: `+91 ${user.phone}`,
+        from: twilioPhone,
+      });
+      
+      const existingOTP = await otpModel.findById(user._id);
+
+      //save to db
+      if(existingOTP){
+        existingOTP.otp = otp;
+        existingOTP.save();
+      }else{
+        
+        await new otpModel({
+          _id: user._id,
+          otp
+        }).save();
+      }
+      
+  
+      console.log(`SMS sent successfully. SID: ${result.sid}`);
+    } catch (error) {
+      console.error('Error sending SMS:', error);
       throw error;
-    } else {
-      console.log('Email sent:', info.response);
     }
-  });
+  }
+
+
+
 }
 
 export { hashPassword, comparePassword, isValidEmail, verifyPhoneNumberAndMail, sendVerificationMail };

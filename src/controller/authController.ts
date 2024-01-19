@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { hashPassword, comparePassword, isValidEmail, verifyPhoneNumberAndMail, sendVerificationMail } from "../helpers/authHelper";
 import userModel from "../models/userModel";
 import JWT from "jsonwebtoken";
-import { verify } from "crypto";
 
 const registerController = async (
   req: Request,
@@ -248,9 +247,12 @@ const verifyDataController = async (req: Request, res: Response): Promise<any> =
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+    if(user.isMailVerified === true && user.isPhoneVerified == true){
+      return res.status(201).json({ message: 'User Email and Phone number already verified.' });
+    }
     sendVerificationMail(user);
 
-    return res.status(200).json({ message: 'OTP and verification mail sent successfully' });
+    return res.status(200).json({ message: 'OTP and Verification mail sent successfully' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
