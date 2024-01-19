@@ -295,7 +295,11 @@ const verifyEmailController = async (req: Request, res: Response): Promise<any> 
 
 const verifyOTPController = async (req: Request, res: Response): Promise<any> => {
   const { _id } = req.body;
-  const token = req.params.otp;
+  const currToken = req.params.otp;
+
+  const token =  currToken.replace("@#$%^&*", '/');
+  
+
 
   try {
     const existingOTP = await otpModel.findById(_id);

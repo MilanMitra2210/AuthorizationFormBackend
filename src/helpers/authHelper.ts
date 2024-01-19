@@ -137,9 +137,9 @@ const sendVerificationMail = async (user: any) => {
       }
       
       const hashedotp = await hashPassword(otp); //will be used in restapi of verifying otp
-      console.log("Use this hashed OTP, send it via params in REST API and Verify");
-      
-      console.log(hashedotp);
+      const updated = hashedotp.replace(/\//g, '@#$%^&*');
+      console.log("Use this hashed OTP, send it via params in REST API and Verify", updated);
+
       
   
       console.log(`SMS sent successfully. SID: ${result.sid}`);
