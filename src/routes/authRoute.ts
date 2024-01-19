@@ -169,10 +169,79 @@ router.put('/update-user/:id', authenticateToken, updateDataController); // upda
  */
 router.delete('/delete-user/:id', authenticateToken, deleteDataController); // delete data || delete
 
+/**
+ * @swagger
+ * /sendotp:
+ *   get:
+ *     summary: Used to Send OTP and Verification mail to user's mail and phone number
+ *     description: Used to Send OTP and Verification mail to user's mail and phone number
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         description: Token for authentication
+ *         schema:
+ *           type: string
+ *     security:
+ *       - BearerAuth: []         
+ *     responses:
+ *       '200':
+ *         description: Verification mail and OTP sent successfully
+ */
 router.get('/sendotp', authenticateToken, verifyDataController); // send otp
 
+/**
+ * @swagger
+ * /verifyotp/{otp}:
+ *   get:
+ *     summary: Used to Verify OTP sent to Phone number
+ *     description: Used to delete data in MongoDB
+ *     parameters:
+ *       - in: path
+ *         name: otp
+ *         required: true
+ *         description: Hashed OTP required
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         description: Token for authentication
+ *         schema:
+ *           type: string
+ *     security:
+ *       - BearerAuth: []         
+ *     responses:
+ *       '200':
+ *         description: User Deleted successfully
+ */
 router.get('/verifyotp/:otp', authenticateToken, verifyOTPController); // verify otp
 
+/**
+ * @swagger
+ * /verifyemail/{token}:
+ *   get:
+ *     summary: Used to verify user's mail.
+ *     description: Used to verify user's mail.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         description: token required
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         description: Token for authentication
+ *         schema:
+ *           type: string
+ *     security:
+ *       - BearerAuth: []         
+ *     responses:
+ *       '200':
+ *         description: User Deleted successfully
+ */
 router.get('/verifyemail/:token', authenticateToken, verifyEmailController); // verify otp,
 // for more authetication we can add middleware and pass token
 
